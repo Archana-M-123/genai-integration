@@ -1,3 +1,5 @@
+from fastapi import FastAPI, UploadFile, Form
+from fastapi.responses import HTMLResponse
 import os
 import getpass
 from typing import Optional 
@@ -31,6 +33,9 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import ConfigurableField
+
+
+app = FastAPI()
 
 
 loader = PyMuPDFLoader(
@@ -544,3 +549,20 @@ for section, subsection in document.items():
 for out in gen_out:
     html_out = markdown.markdown(out)
     display(HTML(html_out)) 
+
+@app.post("/process_pdf/")
+async def process_pdf(file: UploadFile = Form(...), document_id: str = Form(...)):
+    # Save the uploaded PDF file
+    with open(f"{document_id}.pdf", "wb") as buffer:
+        buffer.write(await file.read())
+    
+    # Load the PDF file
+    loader = PyMuPDFLoader(f"{document_id}.pdf", extract_images=True)
+    docs = loader.load()
+   
+    return {"status": "success", "message": "PDF processed successfully."}
+
+# Run FastAPI server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)  
